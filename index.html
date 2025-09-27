@@ -1,381 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Hold-to-Talk Number Pronunciation Trainer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mic Test</title>
   <style>
-    :root { --bg:#f3f4f6; --card:#fff; --primary:#2563eb; --accent:#06b6d4; --danger:#ef4444; }
-    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:var(--bg); margin:0; padding:24px; display:flex; align-items:center; justify-content:center; min-height:100vh;}
-    .card { width:100%; max-width:980px; background:var(--card); border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(2,6,23,0.08); }
-    h1 { margin:0 0 8px 0; font-size:20px; }
-    .top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
-    .range { font-size:13px; color:#475569; }
-    .main { display:flex; gap:18px; align-items:center; }
-    .numberBox { flex:1; padding:18px; border-radius:10px; background:#f8fafc; text-align:center; }
-    .number { font-size:64px; font-weight:800; margin:6px 0; color:#0f172a; }
-    .words { color:#334155; font-size:16px; margin-top:6px; min-height:20px; }
-    .controls { width:320px; display:flex; flex-direction:column; gap:10px; }
-    .btn { padding:12px; border-radius:10px; border:none; font-weight:700; cursor:pointer; }
-    .btn.primary { background:var(--primary); color:white; }
-    .btn.secondary { background:#f3f4f6; color:#0f172a; border:1px solid #e6e6e6; }
-    .mic { display:flex; flex-direction:column; gap:8px; align-items:center; }
-    .micBtn { width:100%; padding:14px; border-radius:10px; border:none; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
-    .micBtn.idle { background:#94a3b8; color:white; }
-    .micBtn.active { background: #ef4444; color:white; } /* red while holding */
-    .status { font-size:13px; color:#475569; text-align:center; min-height:18px; }
-    .panel { background:#fff; padding:12px; border-radius:8px; border:1px solid #e6e6e6; min-height:80px; }
-    .small { font-size:12px; color:#6b7280; margin-top:8px; }
-    input[type=number] { padding:8px; border-radius:8px; border:1px solid #e6e6e6; width:90px; }
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; }
+    #speakBtn {
+      font-size: 1.5rem;
+      padding: 20px 40px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #speakBtn:active { background: #d32f2f; }
+    #feedback { margin-top: 20px; font-size: 1.3rem; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div class="card" role="application">
-    <div class="top">
-      <div>
-        <h1>Hold-to-Talk — Number Pronunciation Trainer</h1>
-        <div class="range">Hold the mic button while speaking, release to stop and check.</div>
-      </div>
-      <div class="range">Session: <span id="goodCount">0</span> correct • <span id="badCount">0</span> wrong</div>
-    </div>
+  <h1>🎤 Hold to Speak</h1>
+  <button id="speakBtn">Hold to Speak</button>
+  <div id="feedback"></div>
 
-    <div class="main">
-      <div class="numberBox">
-        <div style="font-size:13px;color:#6b7280">Current number</div>
-        <div id="number" class="number">—</div>
-        <div id="words" class="words">Click "New Number" to start</div>
-      </div>
+  <script>
+    const feedback = document.getElementById("feedback");
+    const speakBtn = document.getElementById("speakBtn");
 
-      <div class="controls">
-        <div style="display:flex;gap:8px;align-items:center;">
-          <label style="font-size:13px;color:#475569">From</label>
-          <input id="minInput" type="number" value="1" min="0" />
-          <label style="font-size:13px;color:#475569">To</label>
-          <input id="maxInput" type="number" value="100" min="1" />
-          <button id="applyRange" class="btn secondary" style="padding:8px 10px">Apply</button>
-        </div>
+    function startRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
 
-        <div class="mic">
-          <button id="micButton" class="micBtn idle btn primary" aria-pressed="false">🎤 Hold to Speak</button>
-          <div id="micStatus" class="status">Microphone idle</div>
-          <div style="display:flex;gap:8px;width:100%">
-            <button id="newBtn" class="btn secondary" style="flex:1">New Number</button>
-            <button id="revealBtn" class="btn secondary" style="flex:1">Reveal</button>
-          </div>
-        </div>
+      feedback.textContent = "🎤 Listening...";
 
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button id="skipBtn" class="btn secondary" style="flex:1">Skip</button>
-          <div style="font-size:13px;color:#6b7280">Attempts: <span id="attempts">0</span></div>
-        </div>
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        feedback.textContent = "✅ You said: " + transcript;
+      };
 
-        <div class="small">Works best in Chrome. Allow microphone permission when prompted. If the page asks every time, serve it over http(s) (GitHub Pages is fine).</div>
-      </div>
-    </div>
+      recognition.onerror = (event) => {
+        feedback.textContent = "❌ Error: " + event.error;
+      };
 
-    <div style="display:grid;grid-template-columns:1fr 260px; gap:14px;margin-top:14px;">
-      <div class="panel">
-        <div style="font-size:13px;color:#334155;font-weight:700;margin-bottom:6px">Recognized speech</div>
-        <div id="recognized" style="font-weight:700;min-height:28px">—</div>
-        <div id="confidence" style="font-size:12px;color:#475569;margin-top:6px"></div>
-        <div id="feedback" style="margin-top:10px;font-size:14px"></div>
-        <div id="acceptExamples" style="margin-top:10px;font-size:12px;color:#475569"></div>
-      </div>
+      recognition.onend = () => {
+        if (feedback.textContent === "🎤 Listening...") {
+          feedback.textContent = "(No speech detected)";
+        }
+      };
 
-      <div class="panel">
-        <div style="font-weight:700;margin-bottom:6px">Counters</div>
-        <div>Correct: <span id="good">0</span></div>
-        <div>Wrong: <span id="bad">0</span></div>
-        <div style="margin-top:10px;font-size:12px;color:#6b7280">If first try wrong → one more try. Second wrong → shows correct and moves on.</div>
-      </div>
-    </div>
-  </div>
-
-<script>
-/* --- Utilities (number->words + normalization + accept list + matching) --- */
-function numberToWords(n) {
-  const ones = ["zero","one","two","three","four","five","six","seven","eight","nine","ten",
-    "eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
-  const tens = ["", "", "twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
-  if (n < 0) return "minus " + numberToWords(Math.abs(n));
-  if (n < 20) return ones[n];
-  if (n < 100) {
-    const t = Math.floor(n/10);
-    const o = n % 10;
-    return tens[t] + (o ? ( "-" + ones[o] ) : "");
-  }
-  if (n < 1000) {
-    const h = Math.floor(n/100);
-    const rest = n % 100;
-    return ones[h] + " hundred" + (rest ? " " + numberToWords(rest) : "");
-  }
-  if (n < 1000000) {
-    const thousands = Math.floor(n/1000);
-    const rest = n % 1000;
-    return numberToWords(thousands) + " thousand" + (rest ? " " + numberToWords(rest) : "");
-  }
-  return String(n);
-}
-
-function normalizePron(text) {
-  if (!text) return "";
-  return text.toLowerCase()
-    .replace(/\b(o|oh)\b/g, "zero")
-    .replace(/[^a-z0-9\s\-]/g, " ")
-    .replace(/\band\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function buildAcceptList(n) {
-  const base = numberToWords(n);
-  const normBase = normalizePron(base);
-  const alt1 = normBase.replace(/-/g, " ");
-  const digitsSeq = String(n).split("").map(d => {
-    const map = { "0":"zero","1":"one","2":"two","3":"three","4":"four","5":"five","6":"six","7":"seven","8":"eight","9":"nine" };
-    return map[d] || d;
-  }).join(" ");
-  const normDigits = normalizePron(digitsSeq);
-  const set = Array.from(new Set([normBase, alt1, normDigits].filter(Boolean)));
-  return set;
-}
-
-function matchesAccepted(recognized, acceptList) {
-  const norm = normalizePron(recognized);
-  for (const a of acceptList) {
-    if (!a) continue;
-    // exact or substring
-    if (a === norm) return true;
-    if (norm.includes(a) || a.includes(norm)) return true;
-    // token overlap
-    const na = a.split(" ").filter(Boolean);
-    const ns = norm.split(" ").filter(Boolean);
-    if (na.length === 0 || ns.length === 0) continue;
-    const common = na.filter(w => ns.includes(w)).length;
-    const ratio = common / Math.max(na.length, ns.length);
-    if (ratio >= 0.8) return true;
-  }
-  return false;
-}
-
-/* --- App state & elements --- */
-const numberEl = document.getElementById('number');
-const wordsEl = document.getElementById('words');
-const micBtn = document.getElementById('micButton');
-const micStatus = document.getElementById('micStatus');
-const newBtn = document.getElementById('newBtn');
-const revealBtn = document.getElementById('revealBtn');
-const recognizedEl = document.getElementById('recognized');
-const confidenceEl = document.getElementById('confidence');
-const feedbackEl = document.getElementById('feedback');
-const acceptExamples = document.getElementById('acceptExamples');
-const attemptsEl = document.getElementById('attempts');
-const goodCountEl = document.getElementById('good');
-const badCountEl = document.getElementById('bad');
-const goodCountTop = document.getElementById('goodCount');
-const badCountTop = document.getElementById('badCount');
-
-const minInput = document.getElementById('minInput');
-const maxInput = document.getElementById('maxInput');
-const applyRange = document.getElementById('applyRange');
-const skipBtn = document.getElementById('skipBtn');
-
-let currentNumber = null;
-let acceptList = [];
-let attempts = 0;
-let tries = 0;
-let good = 0, bad = 0;
-let isRecognizing = false;
-let recognition = null;
-
-/* --- Speech recognition helper (create new instance each time) --- */
-function createRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return null;
-  const r = new SpeechRecognition();
-  r.lang = 'en-US';
-  r.interimResults = false;
-  r.maxAlternatives = 3;
-
-  r.onstart = () => {
-    isRecognizing = true;
-    micStatus.textContent = "Listening... release to stop";
-    micBtn.classList.remove('idle');
-    micBtn.classList.add('active');
-  };
-
-  r.onresult = (evt) => {
-    const best = evt.results[0][0];
-    const text = best.transcript;
-    const conf = Math.round((best.confidence || 0) * 100);
-    recognizedEl.textContent = text;
-    confidenceEl.textContent = `Confidence: ${conf}%`;
-    // evaluate
-    evaluateRecognition(text);
-  };
-
-  r.onerror = (e) => {
-    isRecognizing = false;
-    micStatus.textContent = "Microphone idle";
-    micBtn.classList.remove('active');
-    micBtn.classList.add('idle');
-    feedbackEl.textContent = "Error: " + (e && e.error ? e.error : 'recognition error');
-    setTimeout(() => { if (!isRecognizing && !currentNumber) newNumber(); }, 700);
-  };
-
-  r.onend = () => {
-    isRecognizing = false;
-    micStatus.textContent = "Microphone idle";
-    micBtn.classList.remove('active');
-    micBtn.classList.add('idle');
-    // if no recognized text (user was silent), show hint
-    if (!recognizedEl.textContent) {
-      feedbackEl.textContent = "No speech detected. Try again.";
-      feedbackEl.style.color = "#981b1b";
+      recognition.start();
+      return recognition;
     }
-  };
 
-  return r;
-}
+    let recognitionInstance = null;
 
-/* --- UI updates --- */
-function updateUI() {
-  numberEl.textContent = currentNumber === null ? "—" : currentNumber;
-  wordsEl.textContent = currentNumber === null ? "" : numberToWords(currentNumber);
-  attemptsEl.textContent = attempts;
-  goodCountEl.textContent = good;
-  badCountEl.textContent = bad;
-  goodCountTop.textContent = good;
-  badCountTop.textContent = bad;
-  acceptExamples.textContent = acceptList.length ? ("Examples: " + acceptList.slice(0,3).map(s => `"${s}"`).join(" • ")) : "";
-}
+    speakBtn.addEventListener("mousedown", () => {
+      recognitionInstance = startRecognition();
+    });
 
-/* --- Generate / control number --- */
-function getRandomNumberFromRange() {
-  const min = Math.max(0, Number(minInput.value) || 1);
-  const max = Math.max(min, Number(maxInput.value) || min+1);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function newNumber() {
-  // stop any running recognition
-  if (recognition && isRecognizing) {
-    try { recognition.stop(); } catch(e) {}
-  }
-  currentNumber = getRandomNumberFromRange();
-  acceptList = buildAcceptList(currentNumber);
-  attempts++;
-  tries = 0;
-  recognizedEl.textContent = "";
-  confidenceEl.textContent = "";
-  feedbackEl.textContent = "";
-  updateUI();
-}
-
-/* --- Evaluation logic: correct / wrong / retry --- */
-function evaluateRecognition(spokenText) {
-  if (currentNumber === null) return;
-  const ok = matchesAccepted(spokenText, acceptList);
-  if (ok) {
-    good++;
-    feedbackEl.style.color = "#065f46";
-    feedbackEl.textContent = `✅ Correct — ${numberToWords(currentNumber)}`;
-    updateUI();
-    // move next after short delay
-    setTimeout(() => newNumber(), 1200);
-  } else {
-    tries++;
-    if (tries === 1) {
-      feedbackEl.style.color = "#981b1b";
-      feedbackEl.textContent = "❌ Not quite — one more try allowed. Hold and speak again.";
-    } else {
-      bad++;
-      feedbackEl.style.color = "#981b1b";
-      feedbackEl.textContent = `❌ Incorrect again — correct: "${numberToWords(currentNumber)}"`;
-      updateUI();
-      setTimeout(() => newNumber(), 1200);
-    }
-  }
-}
-
-/* --- Hold-to-talk handlers (mouse & touch) --- */
-function handlePressStart(e) {
-  e.preventDefault();
-  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-    feedbackEl.textContent = "Speech recognition not supported — use Chrome.";
-    return;
-  }
-  // Prevent double-start
-  if (isRecognizing) return;
-  // clear previous results
-  recognizedEl.textContent = "";
-  confidenceEl.textContent = "";
-  feedbackEl.textContent = "";
-  // create fresh recognition instance
-  recognition = createRecognition();
-  if (!recognition) { feedbackEl.textContent = "SpeechRecognition unavailable"; return; }
-  try {
-    recognition.start();
-  } catch (err) {
-    // some browsers may throw if started very quickly; try recreate/get
-    recognition = createRecognition();
-    try { recognition.start(); } catch (e) { feedbackEl.textContent = "Unable to start microphone"; }
-  }
-}
-
-function handlePressEnd(e) {
-  e.preventDefault();
-  if (!recognition) return;
-  // stop recognition (onend will run)
-  try { recognition.stop(); } catch (err) { /* ignore */ }
-}
-
-/* --- Other controls --- */
-applyRange.addEventListener('click', (e) => {
-  // ensure valid range, then new number
-  const min = Math.max(0, Number(minInput.value) || 1);
-  const max = Math.max(min+0, Number(maxInput.value) || min+1);
-  minInput.value = min;
-  maxInput.value = max;
-  newNumber();
-});
-
-newBtn.addEventListener('click', (e) => newNumber());
-revealBtn.addEventListener('click', (e) => {
-  if (currentNumber !== null) {
-    feedbackEl.style.color = "#0f172a";
-    feedbackEl.textContent = `Expected: "${numberToWords(currentNumber)}"`;
-  }
-});
-skipBtn.addEventListener('click', (e) => {
-  feedbackEl.style.color = "#6b7280";
-  feedbackEl.textContent = `Skipped. Correct: "${numberToWords(currentNumber)}"`;
-  setTimeout(() => newNumber(), 900);
-});
-
-/* mouse & touch events for hold-to-talk */
-micBtn.addEventListener('mousedown', handlePressStart);
-micBtn.addEventListener('mouseup', handlePressEnd);
-micBtn.addEventListener('mouseleave', (e) => { if (isRecognizing) handlePressEnd(e); });
-
-micBtn.addEventListener('touchstart', handlePressStart, { passive:false });
-micBtn.addEventListener('touchend', handlePressEnd, { passive:false });
-micBtn.addEventListener('touchcancel', handlePressEnd, { passive:false });
-
-/* stop recognition if user switches tab */
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && recognition && isRecognizing) {
-    try { recognition.stop(); } catch(e) {}
-  }
-});
-
-/* Initialize */
-(function init() {
-  // show initial number
-  setTimeout(()=> { newNumber(); }, 200);
-  // update display periodically
-  updateUI();
-})();
-</script>
+    speakBtn.addEventListener("mouseup", () => {
+      if (recognitionInstance) recognitionInstance.stop();
+    });
+  </script>
 </body>
 </html>
