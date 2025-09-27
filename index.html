@@ -3,9 +3,114 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Numbers Practice</title>
+  <title>Numbers Pronunciation Practice</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: #f4f4f9;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 20px;
+    }
+    #feedback {
+      margin-top: 15px;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    button {
+      font-size: 1.2rem;
+      padding: 15px 25px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+    }
+    button:active {
+      background: #45a049;
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello! If you see this, GitHub Pages is working 🎉</h1>
+  <h1 id="number">Loading...</h1>
+  <button id="speakBtn">Hold to Speak</button>
+  <div id="feedback"></div>
+
+  <script>
+    const numberEl = document.getElementById("number");
+    const feedbackEl = document.getElementById("feedback");
+    const speakBtn = document.getElementById("speakBtn");
+
+    let currentNumber = 0;
+    let recognition;
+    let tries = 0;
+
+    function getRandomNumber() {
+      return Math.floor(Math.random() * 100) + 1; // numbers 1–100
+    }
+
+    function nextNumber() {
+      currentNumber = getRandomNumber();
+      numberEl.textContent = currentNumber;
+      feedbackEl.textContent = "";
+      tries = 0;
+    }
+
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.toLowerCase().trim();
+        console.log("Heard:", transcript);
+        checkAnswer(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        feedbackEl.textContent = "❌ Error: " + event.error;
+      };
+    }
+
+    function checkAnswer(transcript) {
+      const spoken = transcript.replace(/[^0-9]/g, "");
+      if (spoken == currentNumber) {
+        feedbackEl.textContent = "✅ Correct!";
+        setTimeout(nextNumber, 1000);
+      } else {
+        tries++;
+        if (tries < 2) {
+          feedbackEl.textContent = "❌ Wrong, try again!";
+        } else {
+          feedbackEl.textContent = "❌ Wrong again. Moving on...";
+          setTimeout(nextNumber, 1500);
+        }
+      }
+    }
+
+    // Hold-to-speak button
+    speakBtn.addEventListener("mousedown", () => {
+      recognition.start();
+      feedbackEl.textContent = "🎤 Listening...";
+    });
+
+    speakBtn.addEventListener("mouseup", () => {
+      recognition.stop();
+    });
+
+    window.onload = () => {
+      initSpeechRecognition();
+      nextNumber();
+    };
+  </script>
 </body>
 </html>
