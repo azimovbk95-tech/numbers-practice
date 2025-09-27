@@ -36,10 +36,25 @@
     button:active {
       background: #45a049;
     }
+    .range-inputs {
+      margin-bottom: 20px;
+    }
+    .range-inputs input {
+      width: 60px;
+      padding: 5px;
+      font-size: 1rem;
+      margin: 0 5px;
+    }
   </style>
 </head>
 <body>
-  <h1 id="number">Loading...</h1>
+  <div class="range-inputs">
+    From: <input type="number" id="minRange" value="1" />
+    To: <input type="number" id="maxRange" value="100" />
+    <button onclick="nextNumber()">Start</button>
+  </div>
+
+  <h1 id="number">Press Start</h1>
   <button id="speakBtn">Hold to Speak</button>
   <div id="feedback"></div>
 
@@ -51,16 +66,41 @@
     let currentNumber = 0;
     let recognition;
     let tries = 0;
+    let listening = false;
+
+    function numberToWords(num) {
+      const a = [
+        "", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+        "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+        "sixteen", "seventeen", "eighteen", "nineteen"
+      ];
+      const b = [
+        "", "", "twenty", "thirty", "forty", "fifty",
+        "sixty", "seventy", "eighty", "ninety"
+      ];
+
+      if (num === 0) return "zero";
+      if (num < 20) return a[num];
+      if (num < 100) return b[Math.floor(num / 10)] + (num % 10 ? "-" + a[num % 10] : "");
+      if (num < 1000) {
+        return a[Math.floor(num / 100)] + " hundred" + (num % 100 ? " " + numberToWords(num % 100) : "");
+      }
+      return num.toString(); // fallback
+    }
 
     function getRandomNumber() {
-      return Math.floor(Math.random() * 100) + 1; // numbers 1–100
+      const min = parseInt(document.getElementById("minRange").value) || 1;
+      const max = parseInt(document.getElementById("maxRange").value) || 100;
+      return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
     function nextNumber() {
+      if (recognition) recognition.stop(); // stop mic if running
       currentNumber = getRandomNumber();
       numberEl.textContent = currentNumber;
       feedbackEl.textContent = "";
       tries = 0;
+      listening = false;
     }
 
     function initSpeechRecognition() {
@@ -71,21 +111,30 @@
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event) => {
+        listening = false;
         const transcript = event.results[0][0].transcript.toLowerCase().trim();
         console.log("Heard:", transcript);
         checkAnswer(transcript);
       };
 
       recognition.onerror = (event) => {
+        listening = false;
         feedbackEl.textContent = "❌ Error: " + event.error;
+      };
+
+      recognition.onend = () => {
+        listening = false;
+        if (feedbackEl.textContent === "🎤 Listening...") {
+          feedbackEl.textContent = "";
+        }
       };
     }
 
     function checkAnswer(transcript) {
       const spoken = transcript.replace(/[^0-9]/g, "");
       if (spoken == currentNumber) {
-        feedbackEl.textContent = "✅ Correct!";
-        setTimeout(nextNumber, 1000);
+        feedbackEl.textContent = `✅ Correct! (${numberToWords(currentNumber)})`;
+        setTimeout(nextNumber, 1500);
       } else {
         tries++;
         if (tries < 2) {
@@ -99,17 +148,22 @@
 
     // Hold-to-speak button
     speakBtn.addEventListener("mousedown", () => {
-      recognition.start();
-      feedbackEl.textContent = "🎤 Listening...";
+      if (!listening) {
+        recognition.start();
+        listening = true;
+        feedbackEl.textContent = "🎤 Listening...";
+      }
     });
 
     speakBtn.addEventListener("mouseup", () => {
-      recognition.stop();
+      if (listening) {
+        recognition.stop();
+        listening = false;
+      }
     });
 
     window.onload = () => {
       initSpeechRecognition();
-      nextNumber();
     };
   </script>
 </body>
